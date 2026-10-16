@@ -1,0 +1,10 @@
+# Exact /rename name | board id (lowercase, used as sessions/<id> and task owner). Coordinator id MUST be gk.
+# Edit to the roster you actually run. memory agentId convention: {{OPERATOR_HANDLE}}-<id>
+Gate Keeper|gk
+Deploys|deploys
+Review|review
+Backend|backend
+Mobile|mobile
+Bug-Class|bug-class
+Hotfix|hotfix
+Planner|planner

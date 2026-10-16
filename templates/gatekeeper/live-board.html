@@ -1,0 +1,322 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Gate Keeper Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control-room wall. "Needs you" strip first, then release, then one card per session, log at the end. */
+:root{
+  --bg:#eef1f0; --panel:#ffffff; --ink:#18232a; --muted:#5d6b72; --line:#d5dcdc;
+  --accent:#1f6f78; --signal:#c77700; --signal-bg:#fff4e0; --ok:#2f7d4a; --ok-bg:#e5f3ea;
+  --bad:#b23a3a; --bad-bg:#fbe9e7; --chip:#e4eaea;
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1619; --panel:#172126; --ink:#e3eaec; --muted:#93a3aa; --line:#2a383e;
+  --accent:#5fb8c1; --signal:#f0a531; --signal-bg:#33260f; --ok:#6cc48a; --ok-bg:#15291d;
+  --bad:#ef7d7d; --bad-bg:#3a1d1d; --chip:#223037; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1619; --panel:#172126; --ink:#e3eaec; --muted:#93a3aa; --line:#2a383e;
+  --accent:#5fb8c1; --signal:#f0a531; --signal-bg:#33260f; --ok:#6cc48a; --ok-bg:#15291d;
+  --bad:#ef7d7d; --bad-bg:#3a1d1d; --chip:#223037; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:18px 48px;display:grid;gap:22px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+h1{font-family:var(--f-display);font-weight:700;font-size:30px;letter-spacing:.02em;margin:0;text-transform:uppercase}
+h2{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 10px;color:var(--muted)}
+.meta{font-family:var(--f-mono);font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:6px;vertical-align:middle}
+.dot.live{background:var(--ok)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.muted{color:var(--muted)}
+/* needs you */
+.needs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.need{background:var(--signal-bg);border:1.5px solid var(--signal);border-radius:6px;padding:14px;display:grid;gap:8px;min-width:0;align-content:start}
+.need .kind{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--signal)}
+.need .what{font-weight:600;font-size:16px}
+.need .where{font-size:13.5px}
+.gobox{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gotext{font-family:var(--f-mono);font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;flex:1 1 180px;min-width:0;overflow-wrap:anywhere;user-select:all}
+button{font:600 13px var(--f-body);border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:var(--panel);padding:6px 12px;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+button[disabled]{opacity:.5;cursor:default}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:6px;padding:16px;color:var(--muted)}
+.clear{background:var(--ok-bg);border:1px solid var(--ok);border-radius:6px;padding:12px 14px;color:var(--ok);font-weight:600}
+/* release */
+.release{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:grid;gap:10px}
+.release .top{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+.release .title{font-family:var(--f-display);font-weight:700;font-size:22px}
+.fb{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-mono);font-size:12px;background:var(--chip);border-radius:3px;padding:2px 7px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}
+/* sessions */
+.sessions{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;align-items:start}
+@media (max-width:420px){.sessions,.needs{grid-template-columns:1fr}}
+.sess{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:grid;align-content:start;min-width:0}
+.sess-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.sess-name{font-family:var(--f-display);font-weight:700;font-size:21px;letter-spacing:.02em}
+.sess-role{font-size:12.5px;color:var(--muted)}
+.state{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:3px;background:var(--chip);white-space:nowrap}
+.state.working{background:var(--accent);color:var(--panel)}
+.state.waiting{background:var(--signal-bg);color:var(--signal)}
+.state.blocked{background:var(--bad-bg);color:var(--bad)}
+.state.idle{background:var(--chip);color:var(--muted)}
+.sess-now{padding:10px 14px 4px;font-size:14px}
+.ctx{display:flex;align-items:center;gap:8px;padding:8px 14px 0;font-size:12.5px;color:var(--muted)}
+.ctx .bar{flex:1;height:6px;background:var(--chip);border-radius:3px;overflow:hidden;max-width:160px}
+.ctx .bar i{display:block;height:100%;background:var(--ok)}
+.ctx.warn .bar i{background:var(--signal)} .ctx.hot .bar i{background:var(--bad)}
+.ctx.warn b{color:var(--signal)} .ctx.hot b{color:var(--bad)}
+.ctx.stale{opacity:.6}
+.usage{display:flex;flex-wrap:wrap;gap:10px 22px;padding:10px 0 0;font-size:13px;color:var(--muted)}
+.usage .u{display:flex;align-items:center;gap:8px;min-width:0}
+.usage .bar{width:120px;height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
+.usage .bar i{display:block;height:100%;background:var(--ok)}
+.usage .u.warn .bar i{background:var(--signal)} .usage .u.hot .bar i{background:var(--bad)}
+.usage .u.warn b{color:var(--signal)} .usage .u.hot b{color:var(--bad)} .usage b{color:var(--ink)}
+.usage.stale{opacity:.6}
+.need.ctxneed{border-left:4px solid var(--signal)} .need.ctxneed.hot{border-left-color:var(--bad)}
+.task{padding:10px 14px 14px;border-top:1px dashed var(--line);display:grid;gap:8px}
+.task:first-of-type{border-top:none}
+.task-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.task-t{font-weight:600}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.steps li{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start;font-size:13.5px;padding:3px 6px;border-radius:3px}
+.steps li .box{width:14px;height:14px;border:1.5px solid var(--muted);border-radius:3px;margin-top:3px;display:grid;place-items:center;font-size:10px;line-height:1}
+.steps li.done{color:var(--muted)}
+.steps li.done .box{background:var(--ok);border-color:var(--ok);color:var(--panel)}
+.steps li.cur{background:var(--chip);color:var(--ink);font-weight:500}
+.steps li.cur .box{border-color:var(--accent)}
+.steps li.cur.gate{background:var(--signal-bg)}
+.steps li.cur.gate .box{border-color:var(--signal)}
+.steps .proof{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);display:block;overflow-wrap:anywhere}
+.steps .who{font-family:var(--f-display);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--signal);margin-left:6px}
+.note{font-size:13px;color:var(--muted)}
+.typed{font-size:12.5px;color:var(--ok);font-weight:600}
+/* questions */
+.need.q{background:var(--panel);border-color:var(--accent)}
+.need.q .kind{color:var(--accent)}
+.qbody{font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.opts{display:grid;gap:6px}
+.opt{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start;font-size:13.5px;padding:7px 9px;border:1px solid var(--line);border-radius:4px;cursor:pointer;background:var(--bg)}
+.opt input{margin:2px 0 0;accent-color:var(--accent)}
+.opt.rec{border-color:var(--accent)}
+.opt .rtag{font-family:var(--f-display);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-left:6px}
+.opt:has(input:checked){background:var(--chip);border-color:var(--accent)}
+textarea{font:14px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px;min-height:54px;resize:vertical;width:100%;box-sizing:border-box}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.answered{font-size:13px;padding:8px 10px;border-radius:4px;background:var(--ok-bg);color:var(--ok)}
+.answered.pending{background:var(--signal-bg);color:var(--signal)}
+.rule{font-size:12.5px;color:var(--muted);border-left:3px solid var(--signal);padding:2px 0 2px 10px}
+.qa{padding:10px 14px;border-top:1px dashed var(--line);display:grid;gap:4px;font-size:13.5px}
+.qa .q{font-weight:600}
+/* log */
+.log{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 0;max-height:360px;overflow:auto}
+.log div{display:grid;grid-template-columns:56px 70px 1fr;gap:10px;padding:5px 14px;font-size:13.5px;border-bottom:1px solid var(--line)}
+.log div:last-child{border-bottom:none}
+.log .t{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.log .w{font-weight:600}
+@media (max-width:520px){.log div{grid-template-columns:48px 1fr}.log .w{grid-column:2}.log .x{grid-column:2}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13px}
+@media (prefers-reduced-motion:no-preference){.need{animation:pulse 2.4s ease-in-out 1}@keyframes pulse{0%{box-shadow:0 0 0 0 var(--signal)}60%{box-shadow:0 0 0 6px transparent}}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Gate Keeper Live</h1>
+    <div class="meta"><span id="conn"><span class="dot"></span>connecting</span><span id="clock"></span><span id="upd"></span></div>
+  </header>
+  <div id="usage" class="usage" hidden></div>
+
+  <section aria-labelledby="h-needs">
+    <h2 id="h-needs">Needs you</h2>
+    <p class="rule">Answer questions and rulings here. Merges, deploys, prod reads or writes, secrets and money still need your go typed in that session's own tab.</p>
+    <div id="needs" class="needs"><div class="empty">Loading what's waiting on you…</div></div>
+  </section>
+
+  <section aria-labelledby="h-rel" id="relsec">
+    <h2 id="h-rel">Release</h2>
+    <div id="release"><div class="empty">No release scheduled.</div></div>
+  </section>
+
+  <section aria-labelledby="h-sess">
+    <h2 id="h-sess">Sessions</h2>
+    <div id="sessions" class="sessions"><div class="empty">Session cards appear here once Gate Keeper posts them.</div></div>
+  </section>
+
+  <section aria-labelledby="h-log">
+    <h2 id="h-log">Recent</h2>
+    <div id="log" class="log"><div><span class="t">—</span><span class="w">GK</span><span class="x muted">Nothing logged yet.</span></div></div>
+  </section>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const S={usage:null,ctx:{},sessions:[],tasks:[],release:null,questions:[],log:[],db:null,canWrite:false,arming:null};
+const D={};
+const OP="{{OPERATOR_HANDLE}}"; // gate value meaning "the operator types the go"; keep in sync with LIVE-BOARD-PROTOCOL.md
+const TZ_RAW="{{TZ}}";const TZ=TZ_RAW.includes("{"+"{")?undefined:TZ_RAW; // IANA zone, e.g. America/New_York
+const sessName=id=>(S.sessions.find(s=>s._id===id)||{}).name||id||"A session";
+
+function questionCard(q){
+  const id=esc(q._id),from=esc(sessName(q.from));
+  const opts=(q.options||[]);
+  const arming=S.arming===q._id;
+  const canAnswer=S.canWrite&&S.db;
+  return `<div class="need q" data-q="${id}"><div class="kind">${q.kind==="ruling"?"Ruling":"Question"} · ${from}</div>
+    <div class="what">${esc(q.title)}</div>
+    ${q.body?`<div class="qbody">${esc(q.body)}</div>`:""}
+    ${opts.length?`<div class="opts" role="radiogroup" aria-label="Options">${opts.map((o,i)=>`<label class="opt ${o.rec?"rec":""}"><input type="radio" name="opt-${id}" id="opt-${id}-${i}" value="${esc(o.key||o.label)}"${(D[q._id]||{}).choice===(o.key||o.label)?" checked":""}${canAnswer?"":" disabled"}><span>${esc(o.label)}${o.rec?`<span class="rtag">GK recommends</span>`:""}</span></label>`).join("")}</div>`:""}
+    ${canAnswer?`<textarea id="txt-${id}" placeholder="${opts.length?"Optional: add a note or conditions":"Type your answer"}">${esc((D[q._id]||{}).text||"")}</textarea>
+      ${arming?`<div class="confirm"><span>Send this answer to ${from}?</span><button data-send="${id}">Send</button><button class="ghost" data-cancel="${id}">Back</button></div>`
+        :`<div><button data-arm="${id}">Answer</button></div>`}`
+      :`<div class="where">Answer in <b>${from}</b>'s tab.</div>`}
+    ${q.ticket?`<div class="mono muted">${esc(q.ticket)}</div>`:""}</div>`;
+}
+
+function recentAnswers(sessionId){
+  return S.questions.filter(q=>q.from===sessionId&&q.status!=="open"&&q.answer)
+    .sort((a,b)=>String(b.answer.at).localeCompare(String(a.answer.at))).slice(0,2)
+    .map(q=>`<div class="qa"><span class="q">${esc(q.title)}</span><span>You: ${esc([q.answer.choice,q.answer.text].filter(Boolean).join(" · "))}</span>
+      <span class="answered ${q.status==="answered"?"pending":""}">${q.status==="answered"?"Answered "+esc(ago(q.answer.at))+". Gate Keeper is passing it on.":"Delivered to "+esc(sessName(q.from))+"."}</span></div>`).join("");
+}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const az=d=>new Intl.DateTimeFormat("en-US",{timeZone:TZ,hour:"2-digit",minute:"2-digit",hour12:false}).format(d);
+const azFull=d=>new Intl.DateTimeFormat("en-US",{timeZone:TZ,weekday:"short",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);
+function ago(iso){if(!iso)return"";const m=Math.round((Date.now()-new Date(iso))/60000);if(m<1)return"just now";if(m<60)return m+"m ago";const h=Math.floor(m/60);return h+"h "+(m%60)+"m ago"}
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2200)}
+setInterval(()=>{$("clock").textContent="Local "+azFull(new Date())},15000);$("clock").textContent="Local "+azFull(new Date());
+
+const CTX_WARN=45,CTX_HOT=50,CTX_STALE_MIN=30;
+function ctxOf(id){const c=(S.ctx||{})[id];if(!c||c.pct==null)return null;const ageMin=(Date.now()-new Date(c.at))/60000;return{...c,ageMin,stale:ageMin>CTX_STALE_MIN}}
+function ctxHtml(id){const c=ctxOf(id);if(!c)return"";const cls=c.pct>=CTX_HOT?"hot":c.pct>=CTX_WARN?"warn":"";
+  const msg=c.pct>=CTX_HOT?" · compact now":c.pct>=CTX_WARN?" · compact soon":"";
+  return `<div class="ctx ${cls} ${c.stale?"stale":""}" title="Context used, as your status line shows it. Read ${esc(ago(c.at))}."><span>Context</span><span class="bar"><i style="width:${Math.min(100,c.pct)}%"></i></span><b>${c.pct}%${msg}</b><span>${esc(ago(c.at))}</span></div>`}
+function usageHtml(){const u=S.usage;if(!u)return"";
+  const one=(label,x)=>{if(!x||x.pct==null)return"";const cls=x.pct>=90?"hot":x.pct>=75?"warn":"";
+    return `<span class="u ${cls}"><span>${label}</span><span class="bar"><i style="width:${Math.min(100,x.pct)}%"></i></span><b>${x.pct}%</b><span>resets ${x.resets?esc(azFull(new Date(x.resets))):"?"}</span></span>`};
+  return one("Session (5h)",u.five_hour)+one("Weekly",u.seven_day)+(u.at?`<span>read ${esc(ago(u.at))}</span>`:"")}
+function curIndex(steps){return (steps||[]).findIndex(s=>!s.done)}
+function goReady(t){const i=curIndex(t.steps);return i>=0&&t.steps[i].gate===OP&&t.go&&!t.done}
+
+function needs(){
+  const out=[];
+  for(const s of [...S.sessions].sort((a,b)=>(a.order??99)-(b.order??99))){const c=ctxOf(s._id);if(c&&!c.stale&&c.pct>=CTX_WARN&&s.state!=="compacting")out.push({kind:"Compact",sess:s,c})}
+  for(const t of S.tasks){
+    if(t.done)continue;
+    const i=curIndex(t.steps);if(i<0)continue;const st=t.steps[i];
+    if(st.gate===OP&&t.go) out.push({kind:t.go.kind||"Your go",task:t,step:st});
+    else if(st.gate==="relay") out.push({kind:"Pass along",task:t,step:st});
+  }
+  for(const q of [...S.questions].sort((a,b)=>String(a.created).localeCompare(String(b.created)))) if(q.status==="open") out.push({kind:"Question",q});
+  if(S.release){const i=curIndex(S.release.steps);const st=i>=0?S.release.steps[i]:null;
+    if(st&&st.gate===OP&&S.release.go) out.push({kind:"Release go",task:S.release,step:st,release:true});}
+  return out;
+}
+
+function needCard(n){
+  if(n.q) return questionCard(n.q);
+  if(n.sess){const hot=n.c.pct>=CTX_HOT;return `<div class="need ctxneed ${hot?"hot":""}"><div class="kind">${hot?"Compact now":"Compact soon"}</div><div class="what">${esc(n.sess.name)} is at ${n.c.pct}% context</div>
+    <div class="where">Run <b>/compact</b> in ${esc(n.sess.name)}'s tab when it finishes its current step. Read ${esc(ago(n.c.at))}.</div></div>`}
+  const t=n.task,g=t.go||{};
+  if(n.kind==="Pass along") return `<div class="need"><div class="kind">Pass along</div><div class="what">${esc(t.title)}</div>
+    <div class="where">${esc(n.step.label)}</div>${t.relay?`<div class="gobox"><div class="gotext">${esc(t.relay)}</div><button data-copy="${esc(t.relay)}">Copy</button></div>`:""}</div>`;
+  return `<div class="need"><div class="kind">${esc(n.kind)}</div><div class="what">${esc(t.title)}</div>
+    <div class="where">Go to <b>${esc(g.tab)}</b>'s tab and type:</div>
+    <div class="gobox"><div class="gotext">${esc(g.text)}</div><button data-copy="${esc(g.text)}">Copy</button></div>
+    ${t.typed?`<div class="typed">You marked this typed ${esc(ago(t.typed))}. Waiting for confirmation.</div>`:
+      (S.canWrite&&!n.release?`<button class="ghost" data-typed="${esc(t._id)}">I typed it</button>`:"")}
+    ${t.note?`<div class="note">${esc(t.note)}</div>`:""}</div>`;
+}
+
+function stepsHtml(steps){
+  const ci=curIndex(steps);
+  return `<ol class="steps">${(steps||[]).map((s,i)=>{
+    const cls=[s.done?"done":"",i===ci?"cur":"",i===ci&&s.gate?"gate":""].join(" ");
+    const who=s.gate===OP?"you":s.gate==="relay"?"you → {{PEER_TEAM}}":s.gate==="peer"?"{{PEER_TEAM}}":"";
+    return `<li class="${cls}"><span class="box" aria-hidden="true">${s.done?"✓":""}</span><span>${esc(s.label)}${who&&!s.done?`<span class="who">${who}</span>`:""}${s.proof?`<span class="proof">${esc(s.proof)}</span>`:""}</span></li>`}).join("")}</ol>`;
+}
+
+function taskHtml(t){
+  const done=(t.steps||[]).filter(s=>s.done).length,total=(t.steps||[]).length;
+  return `<div class="task"><div class="task-h"><span class="task-t">${esc(t.title)}</span><span class="mono muted">${done}/${total}${t.sha?` · ${esc(t.sha)}`:""}</span></div>
+    ${stepsHtml(t.steps)}${t.note?`<div class="note">${esc(t.note)}</div>`:""}</div>`;
+}
+
+function render(){
+  const n=needs();
+  const ae=document.activeElement;
+  if(ae&&ae.tagName==="TEXTAREA"&&$("needs").contains(ae)){S.needsStale=true}
+  else{S.needsStale=false;$("needs").innerHTML=n.length?n.map(needCard).join(""):`<div class="clear">Nothing is waiting on you right now.</div>`;}
+  if(S.release){const r=S.release;
+    $("release").innerHTML=`<div class="release"><div class="top"><span class="title">${esc(r.title)}</span><span class="mono muted">pin ${esc(r.pin)}</span><span class="muted">${esc(r.when||"")}</span></div>
+      ${stepsHtml(r.steps)}${(r.feedback||[]).length?`<div><div class="muted" style="font-size:12.5px;margin-bottom:4px">Moves to feedback when live</div><div class="fb">${r.feedback.map(f=>`<span class="chip ${f.done?"ok":""}">${esc(f.id)}</span>`).join("")}</div></div>`:""}
+      ${r.note?`<div class="note">${esc(r.note)}</div>`:""}</div>`;
+  }
+  const sess=[...S.sessions].sort((a,b)=>(a.order??99)-(b.order??99));
+  if(sess.length){$("sessions").innerHTML=sess.map(s=>{
+    const ts=S.tasks.filter(t=>t.owner===s._id&&!t.done).sort((a,b)=>(a.order??99)-(b.order??99));
+    return `<article class="sess"><div class="sess-h"><div><div class="sess-name">${esc(s.name)}</div><div class="sess-role">${esc(s.role||"")}${s.updated?` · ${esc(ago(s.updated))}`:""}</div></div><span class="state ${esc(s.state||"idle")}">${esc(s.state||"idle")}</span></div>
+      ${ctxHtml(s._id)}${s.now?`<div class="sess-now">${esc(s.now)}</div>`:""}${ts.map(taskHtml).join("")}${recentAnswers(s._id)}</article>`}).join("")}
+  const uh=usageHtml();const ue=$("usage");ue.hidden=!uh;ue.innerHTML=uh;ue.classList.toggle("stale",!!(S.usage&&S.usage.at&&(Date.now()-new Date(S.usage.at))/60000>CTX_STALE_MIN));
+  const lg=(S.log||[]).slice(0,40);
+  if(lg.length)$("log").innerHTML=lg.map(e=>`<div><span class="t">${esc(e.t)}</span><span class="w">${esc(e.who)}</span><span class="x">${esc(e.text)}</span></div>`).join("");
+  const latest=[...S.sessions,...S.tasks].map(x=>x.updated).filter(Boolean).sort().pop();
+  $("upd").textContent=latest?"updated "+ago(latest):"";
+}
+
+document.addEventListener("click",async e=>{
+  const c=e.target.closest("[data-copy]");
+  if(c){const txt=c.getAttribute("data-copy");
+    try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it in the tab named on the card.")}
+    catch{const box=c.previousElementSibling;const r=document.createRange();r.selectNodeContents(box);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selected. Press Ctrl/Cmd+C to copy.")}
+    return}
+  const ty=e.target.closest("[data-typed]");
+  if(ty&&S.db){ty.disabled=true;
+    try{await S.db.doc("tasks/"+ty.getAttribute("data-typed")).update({typed:new Date().toISOString()});toast("Marked. Gate Keeper confirms once the session reports the merge.")}
+    catch{ty.disabled=false;toast("Couldn't save that. Tell Gate Keeper directly.")}}
+});
+
+document.addEventListener("input",e=>{
+  const card=e.target.closest("[data-q]");if(!card)return;const id=card.getAttribute("data-q");D[id]=D[id]||{};
+  if(e.target.type==="radio")D[id].choice=e.target.value;
+  if(e.target.tagName==="TEXTAREA")D[id].text=e.target.value;
+});
+document.addEventListener("focusout",e=>{if(e.target.tagName==="TEXTAREA"&&S.needsStale)setTimeout(()=>{if(!(document.activeElement&&document.activeElement.tagName==="TEXTAREA"))render()},150)});
+document.addEventListener("click",async e=>{
+  const arm=e.target.closest("[data-arm]");
+  if(arm){const id=arm.getAttribute("data-arm");const d=D[id]||{};const q=S.questions.find(x=>x._id===id);
+    if(!(d.choice||(d.text||"").trim())){toast((q&&(q.options||[]).length)?"Pick an option or type an answer first.":"Type an answer first.");return}
+    S.arming=id;render();return}
+  const cancel=e.target.closest("[data-cancel]");
+  if(cancel){S.arming=null;render();return}
+  const send=e.target.closest("[data-send]");
+  if(send&&S.db){const id=send.getAttribute("data-send");const d=D[id]||{};send.disabled=true;
+    try{await S.db.doc("questions/"+id).update({status:"answered",answer:{choice:d.choice||"",text:(d.text||"").trim(),at:new Date().toISOString()}});
+      delete D[id];S.arming=null;toast("Sent. Gate Keeper passes it on at its next check.");render()}
+    catch{send.disabled=false;toast("Couldn't save your answer. Answer in the session's tab instead.")}}
+});
+
+function sub(q,key,map){q.onSnapshot(snap=>{S[key]=snap.docs.map(d=>({_id:d.id,...d.data()}));if(map)map();render()},()=>{})}
+
+(async()=>{
+  const db=await window.claude?.use?.("db");
+  if(!db){$("conn").innerHTML='<span class="dot"></span>offline: open this on claude.ai to see live data';$("needs").innerHTML='<div class="empty">Live data is unavailable in this view.</div>';return}
+  S.db=db;$("conn").innerHTML='<span class="dot live"></span>live';
+  const user=await window.claude.use("user");
+  try{const c=await user?.can?.("data.write");S.canWrite=(user?.isOwner?.()??false)||c!==false}catch{S.canWrite=true}
+  sub(db.collection("sessions"),"sessions");
+  sub(db.collection("tasks"),"tasks");
+  sub(db.collection("questions"),"questions");
+  db.doc("board/release").onSnapshot(d=>{S.release=d.exists?{_id:"release",...d.data()}:null;render()},()=>{});
+  db.doc("board/ctx").onSnapshot(d=>{S.ctx=d.exists?(d.data().sessions||{}):{};S.usage=d.exists?(d.data().usage||null):null;render()},()=>{});
+  db.doc("board/log").onSnapshot(d=>{S.log=d.exists?(d.data().entries||[]):[];render()},()=>{});
+  setInterval(render,60000);
+})();
+</script>
+
+</body></html>

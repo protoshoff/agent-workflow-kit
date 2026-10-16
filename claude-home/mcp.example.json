@@ -1,0 +1,22 @@
+{
+  "_comment": "Shape only. Server NAMES, transport and env var NAMES; values come from your shell/secret store, never from this file. Merge into <project>/.mcp.json (project scope) and approve once with `claude` (enabledMcpjsonServers).",
+  "mcpServers": {
+    "agent-memory": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${HOME}/agent-memory-mcp/index.js"],
+      "env": {
+        "MEMORY_SERVICE_URL": "${MEMORY_SERVICE_URL}",
+        "MEMORY_PROJECT_ID": "{{MEMORY_PROJECT_ID}}",
+        "MEMORY_AGENT_ID": "{{OPERATOR_HANDLE}}-session",
+        "MEMORY_API_TOKEN": "${MEMORY_API_TOKEN}"
+      }
+    },
+    "tracker": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["-r", "<tracker-mcp>/node_modules/dotenv/config", "<tracker-mcp>/src/index.js"],
+      "env": { "DOTENV_CONFIG_PATH": "<path to a chmod-600 .env holding the tracker URL + API token>" }
+    }
+  }
+}
