@@ -52,7 +52,8 @@ button[disabled]{opacity:.5;cursor:default}
 .chip{font-family:var(--f-mono);font-size:12px;background:var(--chip);border-radius:3px;padding:2px 7px}
 .chip.ok{background:var(--ok-bg);color:var(--ok)}
 /* sessions */
-.sessions{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;align-items:start}
+.sessions{display:flex;gap:14px;align-items:flex-start}
+.sessions>.mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:14px}
 @media (max-width:420px){.sessions,.needs{grid-template-columns:1fr}}
 .sess{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:grid;align-content:start;min-width:0}
 .sess-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -247,6 +248,15 @@ function taskHtml(t){
     ${stepsHtml(t.steps)}${t.note?`<div class="note">${esc(t.note)}</div>`:""}</div>`;
 }
 
+/* masonry: each card goes under the currently shortest column, so a tall card no longer sets the height of a whole row */
+function masonry(el,cards){
+  const gap=14,minW=360,n=Math.max(1,Math.floor((el.clientWidth+gap)/(minW+gap)));
+  el.innerHTML='<div class="mcol"></div>'.repeat(n);
+  const cols=[...el.children];
+  for(const h of cards)cols.reduce((a,b)=>b.offsetHeight<a.offsetHeight?b:a).insertAdjacentHTML("beforeend",h);
+  el._cards=cards;el._w=el.clientWidth;
+}
+new ResizeObserver(()=>{const el=$("sessions");if(el._cards&&el.clientWidth!==el._w)masonry(el,el._cards)}).observe($("sessions"));
 function render(){
   const n=needs();
   const ae=document.activeElement;
@@ -258,10 +268,10 @@ function render(){
       ${r.note?`<div class="note">${esc(r.note)}</div>`:""}</div>`;
   }
   const sess=[...S.sessions].sort((a,b)=>(a.order??99)-(b.order??99));
-  if(sess.length){$("sessions").innerHTML=sess.map(s=>{
+  if(sess.length)masonry($("sessions"),sess.map(s=>{
     const ts=S.tasks.filter(t=>t.owner===s._id&&!t.done).sort((a,b)=>(a.order??99)-(b.order??99));
     return `<article class="sess"><div class="sess-h"><div><div class="sess-name">${esc(s.name)}</div><div class="sess-role">${esc(s.role||"")}${s.updated?` · ${esc(ago(s.updated))}`:""}</div></div><span class="state ${esc(s.state||"idle")}">${esc(s.state||"idle")}</span></div>
-      ${ctxHtml(s._id)}${s.now?`<div class="sess-now">${esc(s.now)}</div>`:""}${ts.map(taskHtml).join("")}${recentAnswers(s._id)}</article>`}).join("")}
+      ${ctxHtml(s._id)}${s.now?`<div class="sess-now">${esc(s.now)}</div>`:""}${ts.map(taskHtml).join("")}${recentAnswers(s._id)}</article>`}));
   const uh=usageHtml();const ue=$("usage");ue.hidden=!uh;ue.innerHTML=uh;ue.classList.toggle("stale",!!(S.usage&&S.usage.at&&(Date.now()-new Date(S.usage.at))/60000>CTX_STALE_MIN));
   const lg=(S.log||[]).slice(0,40);
   if(lg.length)$("log").innerHTML=lg.map(e=>`<div><span class="t">${esc(e.t)}</span><span class="w">${esc(e.who)}</span><span class="x">${esc(e.text)}</span></div>`).join("");
