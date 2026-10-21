@@ -9,7 +9,7 @@ Status: **generic** = copied unchanged (or comment-only edits); **adapted** = lo
 | bootstrap-ubuntu.sh | replaces GK `apply-autocompact.sh` + `apply-board-reminder.sh` flow | new |
 | kit/tmux-up.sh | replaces cmux tab-per-session practice (KICKOFF.md intro) | new |
 | templates/gatekeeper/KICKOFF.md | GK/KICKOFF.md + SETUP "Gate Keeper's routine" | adapted |
-| templates/gatekeeper/BOARD.md | GK/BOARD.md RESUME block (rules 1-5, 4a-4c, standing exception, compaction) | adapted (state tables emptied) |
+| templates/gatekeeper/BOARD.md | GK/BOARD.md RESUME block (rules 1-5, 4a-4c and 4b-2, standing exception, compaction) | adapted (state tables emptied) |
 | templates/gatekeeper/LIVE-BOARD-PROTOCOL.md | GK/LIVE-BOARD-PROTOCOL.md + SETUP step 7 data shapes | adapted |
 | templates/gatekeeper/live-board.html | GK/live-board.html | adapted (title/data/names stripped; `OP`, `TZ`, `PEER_TEAM` placeholders; logic unchanged) |
 | templates/gatekeeper/LOG.md | GK/LOG.md header + entry format only | adapted (no log content) |

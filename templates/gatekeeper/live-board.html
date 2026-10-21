@@ -31,7 +31,9 @@ h2{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.1
 .mono{font-family:var(--f-mono);font-size:12.5px}
 .muted{color:var(--muted)}
 /* needs you */
-.needs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.needs{display:flex;gap:12px;align-items:flex-start}
+.needs>.mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:12px}
+.needs>.clear,.needs>.empty,.sessions>.empty{flex:1 1 auto}
 .need{background:var(--signal-bg);border:1.5px solid var(--signal);border-radius:6px;padding:14px;display:grid;gap:8px;min-width:0;align-content:start}
 .need .kind{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--signal)}
 .need .what{font-weight:600;font-size:16px}
@@ -54,7 +56,6 @@ button[disabled]{opacity:.5;cursor:default}
 /* sessions */
 .sessions{display:flex;gap:14px;align-items:flex-start}
 .sessions>.mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:14px}
-@media (max-width:420px){.sessions,.needs{grid-template-columns:1fr}}
 .sess{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:grid;align-content:start;min-width:0}
 .sess-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
 .sess-name{font-family:var(--f-display);font-weight:700;font-size:21px;letter-spacing:.02em}
@@ -225,7 +226,8 @@ function needCard(n){
     <div class="where">Run <b>/compact</b> in ${esc(n.sess.name)}'s tab when it finishes its current step. Read ${esc(ago(n.c.at))}.</div></div>`}
   const t=n.task,g=t.go||{};
   if(n.kind==="Pass along") return `<div class="need"><div class="kind">Pass along</div><div class="what">${esc(t.title)}</div>
-    <div class="where">${esc(n.step.label)}</div>${t.relay?`<div class="gobox"><div class="gotext">${esc(t.relay)}</div><button data-copy="${esc(t.relay)}">Copy</button></div>`:""}</div>`;
+    <div class="where">${esc(n.step.label)}</div>${t.relay?`<div class="gobox"><div class="gotext">${esc(t.relay)}</div><button data-copy="${esc(t.relay)}">Copy</button></div>`:""}
+    ${S.canWrite?`<button class="ghost" data-sent="${esc(t._id)}">I sent it</button>`:""}</div>`;
   return `<div class="need"><div class="kind">${esc(n.kind)}</div><div class="what">${esc(t.title)}</div>
     <div class="where">Go to <b>${esc(g.tab)}</b>'s tab and type:</div>
     <div class="gobox"><div class="gotext">${esc(g.text)}</div><button data-copy="${esc(g.text)}">Copy</button></div>
@@ -248,20 +250,27 @@ function taskHtml(t){
     ${stepsHtml(t.steps)}${t.note?`<div class="note">${esc(t.note)}</div>`:""}</div>`;
 }
 
-/* masonry: each card goes under the currently shortest column, so a tall card no longer sets the height of a whole row */
-function masonry(el,cards){
-  const gap=14,minW=360,n=Math.max(1,Math.floor((el.clientWidth+gap)/(minW+gap)));
+/* masonry: each card goes under the currently shortest column, so a tall card no longer sets the height of a whole row.
+   Used by Needs you (columns at least 300px wide) and Sessions (at least 360px). */
+function masonry(el,cards,minW,gap){
+  const n=Math.max(1,Math.floor((el.clientWidth+gap)/(minW+gap)));
   el.innerHTML='<div class="mcol"></div>'.repeat(n);
   const cols=[...el.children];
   for(const h of cards)cols.reduce((a,b)=>b.offsetHeight<a.offsetHeight?b:a).insertAdjacentHTML("beforeend",h);
-  el._cards=cards;el._w=el.clientWidth;
+  el._cards=cards;el._w=el.clientWidth;el._minW=minW;el._gap=gap;
 }
-new ResizeObserver(()=>{const el=$("sessions");if(el._cards&&el.clientWidth!==el._w)masonry(el,el._cards)}).observe($("sessions"));
+/* an answer being typed in Needs you must survive a re-render, so that section waits until the textarea loses focus */
+function needsBusy(){const ae=document.activeElement;return !!(ae&&ae.tagName==="TEXTAREA"&&$("needs").contains(ae))}
+const relayout=new ResizeObserver(es=>{for(const e of es){const el=e.target;if(!el._cards||el.clientWidth===el._w)continue;
+  if(el.id==="needs"&&needsBusy()){S.needsStale=true;continue}
+  masonry(el,el._cards,el._minW,el._gap)}});
+relayout.observe($("needs"));relayout.observe($("sessions"));
 function render(){
   const n=needs();
-  const ae=document.activeElement;
-  if(ae&&ae.tagName==="TEXTAREA"&&$("needs").contains(ae)){S.needsStale=true}
-  else{S.needsStale=false;$("needs").innerHTML=n.length?n.map(needCard).join(""):`<div class="clear">Nothing is waiting on you right now.</div>`;}
+  if(needsBusy()){S.needsStale=true}
+  else{S.needsStale=false;const ne=$("needs");
+    if(n.length)masonry(ne,n.map(needCard),300,12);
+    else{ne._cards=null;ne.innerHTML=`<div class="clear">Nothing is waiting on you right now.</div>`}}
   if(S.release){const r=S.release;
     $("release").innerHTML=`<div class="release"><div class="top"><span class="title">${esc(r.title)}</span><span class="mono muted">pin ${esc(r.pin)}</span><span class="muted">${esc(r.when||"")}</span></div>
       ${stepsHtml(r.steps)}${(r.feedback||[]).length?`<div><div class="muted" style="font-size:12.5px;margin-bottom:4px">Moves to feedback when live</div><div class="fb">${r.feedback.map(f=>`<span class="chip ${f.done?"ok":""}">${esc(f.id)}</span>`).join("")}</div></div>`:""}
@@ -271,7 +280,7 @@ function render(){
   if(sess.length)masonry($("sessions"),sess.map(s=>{
     const ts=S.tasks.filter(t=>t.owner===s._id&&!t.done).sort((a,b)=>(a.order??99)-(b.order??99));
     return `<article class="sess"><div class="sess-h"><div><div class="sess-name">${esc(s.name)}</div><div class="sess-role">${esc(s.role||"")}${s.updated?` · ${esc(ago(s.updated))}`:""}</div></div><span class="state ${esc(s.state||"idle")}">${esc(s.state||"idle")}</span></div>
-      ${ctxHtml(s._id)}${s.now?`<div class="sess-now">${esc(s.now)}</div>`:""}${ts.map(taskHtml).join("")}${recentAnswers(s._id)}</article>`}));
+      ${ctxHtml(s._id)}${s.now?`<div class="sess-now">${esc(s.now)}</div>`:""}${ts.map(taskHtml).join("")}${recentAnswers(s._id)}</article>`}),360,14);
   const uh=usageHtml();const ue=$("usage");ue.hidden=!uh;ue.innerHTML=uh;ue.classList.toggle("stale",!!(S.usage&&S.usage.at&&(Date.now()-new Date(S.usage.at))/60000>CTX_STALE_MIN));
   const lg=(S.log||[]).slice(0,40);
   if(lg.length)$("log").innerHTML=lg.map(e=>`<div><span class="t">${esc(e.t)}</span><span class="w">${esc(e.who)}</span><span class="x">${esc(e.text)}</span></div>`).join("");
@@ -289,6 +298,14 @@ document.addEventListener("click",async e=>{
   if(ty&&S.db){ty.disabled=true;
     try{await S.db.doc("tasks/"+ty.getAttribute("data-typed")).update({typed:new Date().toISOString()});toast("Marked. Gate Keeper confirms once the session reports the merge.")}
     catch{ty.disabled=false;toast("Couldn't save that. Tell Gate Keeper directly.")}}
+  /* "I sent it" on a Pass along card: ticks the relay step with a timestamp, so the operator never has to message Gate Keeper about it */
+  const sn=e.target.closest("[data-sent]");
+  if(sn&&S.db){sn.disabled=true;const id=sn.getAttribute("data-sent");const t=S.tasks.find(x=>x._id===id);
+    const i=t?curIndex(t.steps):-1;
+    if(!t||i<0||t.steps[i].gate!=="relay"){sn.disabled=false;toast("This card changed. Reload and try again.");return}
+    const at=new Date();const steps=t.steps.map((s,k)=>k===i?{...s,done:true,proof:"Marked sent "+az(at)}:s);
+    try{await S.db.doc("tasks/"+id).update({steps,sent:at.toISOString(),updated:at.toISOString()});toast("Marked sent. It drops off Needs you.")}
+    catch{sn.disabled=false;toast("Couldn't save that. Tell Gate Keeper directly.")}}
 });
 
 document.addEventListener("input",e=>{

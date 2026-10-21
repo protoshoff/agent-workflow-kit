@@ -11,16 +11,17 @@ Tool: `ArtifactData` (load once: ToolSearch `select:ArtifactData`). Every write 
    - **Never tick these yourself:** "Review CLEARED", "CI green on SHA", "Merge go", "Merged", "Live", "to feedback". GK writes those (Review may tick CLEARED, CI green, and "Review merge check").
    - A new task, or a SHA change after a fix round: tick what you can and tell GK. GK resets the gate steps.
 3. **Questions for the operator**: `questions/<you>-<short-slug>`, using `set` with `{from, kind:"question"|"ruling", status:"open", created (ISO UTC), title, body, options:[{key,label,rec?}], ticket}`. Keep `title` to one plain sentence; put the detail in `body`. Mark at most one option `rec:true`, and only when you have a recommendation.
-4. **Deploys only**: progress steps on `board/release`. Never the "Prod go" step.
+4. **Deploys only**: progress steps on `board/release`. Never the "Prod go" step. **GK owns the release slot:** it creates `board/release` for each prod deploy (title, full pinned SHA, window, steps, tickets to move to `{{DONE_STATUS}}`) and clears it after the post-deploy check. The page shows one release at a time, so a second planned deploy waits in GK's notes until the slot is free. The prod go shows there as a "Release go", still typed by the operator in Deploys' tab. Without this rule nobody creates the doc and the Release section stays empty.
 
 ## Collections (shapes the page reads)
 - `sessions/<id>`: `{name, role, order, now, state, updated}`
-- `tasks/<id>`: `{owner, title, note, sha, order, done, steps:[{label, done, proof, gate}], go:{tab, text, kind}, relay, typed, updated}`
+- `tasks/<id>`: `{owner, title, note, sha, order, done, steps:[{label, done, proof, gate}], go:{tab, text, kind, note, precondition}, relay, typed, sent, updated}`
 - `questions/<from>-<slug>`: above, plus on answer `status:"answered"`, `answer:{choice,text,at}`; GK later sets `status:"relayed"` and `relayedAt`.
-- `board/ctx` `{sessions:{<id>:{pct,at}}, usage}` (GK writes from `hooks/ctx-sync.sh`), `board/release`, `board/log` `{entries:[{t,who,text}]}` (GK only).
+- `board/ctx` `{sessions:{<id>:{pct,at}}, usage}` (GK writes from `hooks/ctx-sync.sh`), `board/release` `{title, pin, when, steps, go, feedback:[{id,done}], note}`, `board/log` `{entries:[{t,who,text}]}` (GK only).
 
 ## Needs-you logic (what the page shows as waiting on the operator)
-First open step of a task with `gate:"{{OPERATOR_HANDLE}}"` AND a `go` field -> a "go card" (text to type in the named tab). `gate:"relay"` -> "Pass along". Open `questions` -> Question/Ruling cards. A session at >=45% context -> "Compact soon".
+First open step of a task with `gate:"{{OPERATOR_HANDLE}}"` AND a `go` field -> a "go card" (text to type in the named tab). `gate:"relay"` -> "Pass along", with an "I sent it" button: tapping it ticks that relay step (proof "Marked sent HH:MM") and sets `sent`, so a relay can finish with no message to GK. That is why GK re-reads every relay- and operator-gated card at the start of each turn (BOARD.md rule 4b-2). The first open step of `board/release` with `gate:"{{OPERATOR_HANDLE}}"` and a `go` -> a "Release go" card. Open `questions` -> Question/Ruling cards. A session at >=45% context -> "Compact soon".
+Both card grids (Needs you, Sessions) are masonry: each card goes under the currently shortest column, so a tall card never leaves a gap under its short neighbours. An answer being typed in Needs you holds that section's re-render until the textarea loses focus.
 `typed` is set when the operator taps "I typed it". Rule: whenever a card's `go` changes or is ticked, delete `typed` in the SAME write (`{"__delete__":true}`), or the board says "Waiting for confirmation" for a go nobody typed.
 
 ## What you never do
@@ -36,3 +37,8 @@ Send GK `UPDATE:` / `ASK:` messages as before (SendMessage). The board adds to t
 - Because it can fire at any moment, keep state durable: tracker note at each milestone, board card and task steps current, WIP committed and pushed at each stopping point, note ids and SHAs written down, not held in context.
 - After a compaction, a SessionStart hook tells you what to re-read (your KICKOFF.md section, this protocol, your board card and tasks). Do that first, then send GK `UPDATE: compacted; resuming at <ticket/PR, SHA, next step>`.
 - If an action the operator granted first-hand in your tab (a standing exception) is refused after compaction, ask the operator to re-grant it in your tab. Never ask another session to do it.
+
+## board/ctx refresh (GK)
+- Create `board/ctx` once at setup with a `set` from the first `ctx-sync.sh` output. Until the doc exists, the context and usage meters never show.
+- After that, GK refreshes it by adding `{op:update, collection:board, doc_id:ctx, file_path:<ctx-sync output>}` to board batches it is already sending (run `bash .gatekeeper/hooks/ctx-sync.sh <out.json>` first). There is no dedicated cron, for token cost. The meters show "read X ago", so staleness is visible.
+- The Session (5h) / Weekly meters need `$TMPDIR/claude-usage.json`, written by a status-line script (SETUP-UBUNTU.md section 10). If the meters go blank, check that this file still exists: a status-line update can drop the line that writes it.

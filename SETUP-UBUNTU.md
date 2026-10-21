@@ -48,6 +48,7 @@ In the GK tab ask for a CronCreate (e.g. `3 23 * * *` local) with a prompt like:
 - [ ] Round-trip: GK `SendMessage {to:"Review", message:"ping from GK"}`; Review (at its next tool call) replies `SendMessage {to:"Gate Keeper", message:"pong"}`. **VERIFY-ON-BOX** (delivery latency; a permission prompt may hold an incoming message until approved).
 - [ ] `ArtifactData` `list` on `sessions` of the NEW board returns your seeded cards, and `set` + `get` of a test question round-trips with `if_version`.
 - [ ] Open the board in a browser: a test task whose first open step is `gate:"<operator handle>"` with a `go` field shows in "Needs you"; ticking it makes it vanish.
+- [ ] A test task whose first open step is `gate:"relay"` shows as "Pass along"; "I sent it" ticks that step (proof "Marked sent HH:MM") and the card drops off.
 - [ ] Compact hook: in a worker, `/compact`; the next turn must show the "[post-compaction re-anchor]" text and `.gatekeeper/compactions.log` gains a line. **VERIFY-ON-BOX** (hook JSON `transcript_path` and `agentName` in the transcript were observed on macOS with Claude Code 2.1.29x).
 - [ ] Board reminder: in GK run a few `Bash` calls without listing `questions` for 10+ minutes; expect a "GK BOARD CHECK" context line. Quick offline test is in `MANIFEST.md`.
 - [ ] `session-reaper.py` does not kill anything unrelated: it targets `/tmp/claude-<uid>/<project>/<session>/` scratchpads; on Linux confirm that path layout (`ls /tmp/claude-$(id -u)`). **VERIFY-ON-BOX**.
